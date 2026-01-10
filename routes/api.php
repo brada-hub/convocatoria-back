@@ -27,8 +27,8 @@ Route::get('/status', function () {
     ]);
 });
 
-// Rutas públicas con rate limiting moderado
-Route::middleware(['throttle:public-api'])->group(function () {
+// Rutas públicas (temporalmente sin rate limiting para producción)
+Route::group([], function () {
     // Convocatorias abiertas
     Route::get('/convocatorias/abiertas', [ConvocatoriaController::class, 'abiertas']);
     Route::get('/convocatorias/{slug}', [ConvocatoriaController::class, 'porSlug']);
@@ -41,14 +41,14 @@ Route::middleware(['throttle:public-api'])->group(function () {
     Route::get('/cargos/activos', [CargoController::class, 'activos']);
 });
 
-// Verificación de CI - Rate limiting específico
-Route::middleware(['throttle:check-ci'])->group(function () {
+// Verificación de CI
+Route::group([], function () {
     Route::post('/check-ci', [ConvocatoriaController::class, 'checkCI']);
     Route::post('/consultar-estado', [ConvocatoriaController::class, 'consultarEstado']);
 });
 
-// Proceso de postulación - Rate limiting estricto
-Route::middleware(['throttle:postulacion'])->group(function () {
+// Proceso de postulación
+Route::group([], function () {
     Route::post('/postulante/registrar', [PostulacionController::class, 'registrarPostulante']);
     Route::post('/postulante/expediente', [PostulacionController::class, 'guardarExpediente']);
     Route::post('/postulante/postular', [PostulacionController::class, 'enviarPostulaciones']);
