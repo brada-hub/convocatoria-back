@@ -3,14 +3,62 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Postulante extends Model
 {
-    protected $fillable = ['ci', 'nombre_completo', 'email', 'telefono'];
+    use HasFactory;
 
-    public function formaciones() { return $this->hasMany(Formacion::class); }
-    public function experiencias() { return $this->hasMany(Experiencia::class); }
-    public function capacitaciones() { return $this->hasMany(Capacitacion::class); }
-    public function reconocimientos() { return $this->hasMany(Reconocimiento::class); }
-    public function postulaciones() { return $this->hasMany(Postulacion::class); }
+    protected $fillable = [
+        'ci', 'nombres', 'apellidos', 'email', 'celular',
+        'foto_perfil', 'fecha_nacimiento', 'genero'
+    ];
+
+    protected $casts = [
+        'fecha_nacimiento' => 'date',
+    ];
+
+    // Accessor para nombre completo
+    public function getNombreCompletoAttribute()
+    {
+        return "{$this->nombres} {$this->apellidos}";
+    }
+
+    // Relaciones con tablas de méritos
+    public function formaciones()
+    {
+        return $this->hasMany(Formacion::class);
+    }
+
+    public function experiencias()
+    {
+        return $this->hasMany(Experiencia::class);
+    }
+
+    public function capacitaciones()
+    {
+        return $this->hasMany(Capacitacion::class);
+    }
+
+    public function producciones()
+    {
+        return $this->hasMany(Produccion::class);
+    }
+
+    public function reconocimientos()
+    {
+        return $this->hasMany(Reconocimiento::class);
+    }
+
+    public function postulaciones()
+    {
+        return $this->hasMany(Postulacion::class);
+    }
+
+    // Obtener postulaciones con detalles de oferta
+    public function postulacionesConDetalle()
+    {
+        return $this->postulaciones()
+            ->with(['oferta.convocatoria', 'oferta.sede', 'oferta.cargo']);
+    }
 }

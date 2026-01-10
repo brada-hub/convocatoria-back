@@ -1,9 +1,0 @@
-vendor
-node_modules
-.env
-.git
-.gitignore
-Dockerfile
-docker-compose.yml
-storage/*.key
-tests

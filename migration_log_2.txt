@@ -1,0 +1,22 @@
+
+  [41;1m Illuminate\Database\QueryException [49;22m
+
+[39;1m  SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión (Connection: mysql, Host: localhost, Port: 3306, Database: convocatoria, SQL: select exists (select 1 from information_schema.tables where table_schema = schema() and table_name = 'migrations' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED')) as `exists`)[39;22m
+
+  at [32mvendor\laravel\framework\src\Illuminate\Database\Connection.php[39m:[32m831[39m
+    827▕             $exceptionType = $this->isUniqueConstraintError($e)
+    828▕                 ? UniqueConstraintViolationException::class
+    829▕                 : QueryException::class;
+    830▕ 
+  ➜ 831▕             throw new $exceptionType(
+    832▕                 $this->getNameWithReadWriteType(),
+    833▕                 $query,
+    834▕                 $this->prepareBindings($bindings),
+    835▕                 $e,
+
+  [33m1   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connectors\Connector.php[39;22m:[39;1m67[39;22m
+  [90m    PDOException::("SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión")[39m
+
+  [33m2   [39m[39;1mvendor\laravel\framework\src\Illuminate\Database\Connectors\Connector.php[39;22m:[39;1m67[39;22m
+  [90m    PDO::connect("mysql:host=localhost;port=3306;dbname=convocatoria", "root", Object(SensitiveParameterValue), [])[39m
+
