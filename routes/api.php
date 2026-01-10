@@ -100,6 +100,15 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     // Ver expediente de postulante
     Route::get('/postulantes/{postulante}/expediente', [ConvocatoriaController::class, 'verExpediente']);
 
+    // ---- ROLES ----
+    Route::patch('/roles/{rol}/toggle', [\App\Http\Controllers\RolController::class, 'toggleActivo']);
+    Route::apiResource('roles', \App\Http\Controllers\RolController::class);
+
+    // ---- USUARIOS ----
+    Route::patch('/users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword']);
+    Route::patch('/users/{user}/toggle', [\App\Http\Controllers\UserController::class, 'toggleActivo']);
+    Route::apiResource('users', \App\Http\Controllers\UserController::class);
+
     // Dashboard stats
     Route::get('/dashboard/stats', function () {
         return response()->json([
@@ -108,14 +117,14 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
             'pendientes' => \App\Models\Postulacion::where('estado', 'pendiente')->count(),
             'postulantes' => \App\Models\Postulante::count(),
             'recientes' => \App\Models\Postulacion::with(['postulante', 'oferta.cargo', 'oferta.convocatoria'])
-                            ->orderBy('created_at', 'desc')
-                            ->take(5)
-                            ->get(),
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get(),
             'proximas_cierre' => \App\Models\Convocatoria::where('estado', 'activa')
-                                    ->whereDate('fecha_cierre', '>=', now())
-                                    ->orderBy('fecha_cierre', 'asc')
-                                    ->take(4)
-                                    ->get()
+                ->whereDate('fecha_cierre', '>=', now())
+                ->orderBy('fecha_cierre', 'asc')
+                ->take(4)
+                ->get()
         ]);
     });
 });

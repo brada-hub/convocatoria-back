@@ -20,10 +20,20 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'nombres',
+        'apellidos',
+        'ci',
         'email',
         'password',
+        'rol_id',
+        'activo',
+        'must_change_password',
     ];
+
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -40,11 +50,10 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'activo' => 'boolean',
+        'must_change_password' => 'boolean',
+    ];
 }

@@ -10,19 +10,31 @@ use App\Models\Sede;
 use App\Models\Cargo;
 use App\Models\Convocatoria;
 use App\Models\Oferta;
+use App\Models\Rol;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // ==============================
+        // ROLES
+        // ==============================
+        $adminRol = Rol::updateOrCreate(['nombre' => 'Administrador'], ['descripcion' => 'Acceso total al sistema', 'activo' => true]);
+        $userRol = Rol::updateOrCreate(['nombre' => 'Usuario'], ['descripcion' => 'Acceso limitado', 'activo' => true]);
+
+        // ==============================
         // USUARIO ADMINISTRADOR
         // ==============================
         User::updateOrCreate(
-            ['email' => 'admin@sistema.com'],
+            ['email' => 'admin@sistema.com'], // Still using email as unique key for seeding idempotency? Or CI? Let's use CI.
             [
-                'name' => 'Administrador',
+                'nombres' => 'Administrador',
+                'apellidos' => 'Sistema',
+                'ci' => 'admin', // Dummy CI for admin
+                'rol_id' => $adminRol->id,
                 'password' => Hash::make('admin123'),
+                'activo' => true,
+                'must_change_password' => false,
             ]
         );
 
