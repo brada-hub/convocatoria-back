@@ -26,17 +26,20 @@ class DatabaseSeeder extends Seeder
         // USUARIO ADMINISTRADOR
         // ==============================
         User::updateOrCreate(
-            ['email' => 'admin@sistema.com'], // Still using email as unique key for seeding idempotency? Or CI? Let's use CI.
+            ['ci' => '5927724'],
             [
-                'nombres' => 'Administrador',
-                'apellidos' => 'Sistema',
-                'ci' => 'admin', // Dummy CI for admin
+                'nombres' => 'JUAN JOSE',
+                'apellidos' => 'MAMANI VIA',
+                'email' => 'juan.mamani@sistema.com',
                 'rol_id' => $adminRol->id,
                 'password' => Hash::make('admin123'),
                 'activo' => true,
                 'must_change_password' => false,
             ]
         );
+
+        // Eliminar usuario antiguo si existe
+        User::where('email', 'admin@sistema.com')->delete();
 
         // ==============================
         // SEDES
@@ -170,7 +173,7 @@ class DatabaseSeeder extends Seeder
 
         // Información de seed completado
         $this->command->info('✅ Datos de prueba creados exitosamente:');
-        $this->command->info('   - Usuario admin: admin@sistema.com / admin123');
+        $this->command->info('   - Usuario admin: JUAN JOSE MAMANI VIA (CI: 5927724) / admin123');
         $this->command->info('   - ' . Sede::count() . ' sedes');
         $this->command->info('   - ' . Cargo::count() . ' cargos');
         $this->command->info('   - ' . Convocatoria::count() . ' convocatorias');

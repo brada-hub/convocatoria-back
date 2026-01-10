@@ -4,14 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Traits\Auditable;
 
 class Convocatoria extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, Auditable;
 
     protected $fillable = [
-        'titulo', 'descripcion', 'fecha_inicio', 'fecha_cierre', 'slug', 'estado'
+        'titulo',
+        'descripcion',
+        'fecha_inicio',
+        'fecha_cierre',
+        'slug',
+        'estado'
     ];
 
     protected $casts = [
@@ -52,6 +59,15 @@ class Convocatoria extends Model
     public function postulaciones()
     {
         return $this->hasManyThrough(Postulacion::class, Oferta::class, 'convocatoria_id', 'oferta_id');
+    }
+
+    // Documentos requeridos para esta convocatoria
+    public function documentosRequeridos()
+    {
+        return $this->belongsToMany(TipoDocumento::class, 'convocatoria_documentos', 'convocatoria_id', 'tipo_documento_id')
+            ->withPivot('obligatorio', 'orden')
+            ->orderByPivot('orden')
+            ->withTimestamps();
     }
 
     // Scopes

@@ -10,13 +10,23 @@ use App\Models\Capacitacion;
 use App\Models\Produccion;
 use App\Models\Reconocimiento;
 use App\Models\Oferta;
+use App\Services\PostulacionService;
+use App\Services\ExpedienteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class PostulacionController extends Controller
 {
+    protected PostulacionService $postulacionService;
+    protected ExpedienteService $expedienteService;
+
+    public function __construct(PostulacionService $postulacionService, ExpedienteService $expedienteService)
+    {
+        $this->postulacionService = $postulacionService;
+        $this->expedienteService = $expedienteService;
+    }
+
     /**
      * Registrar o actualizar postulante con sus datos básicos
      */
@@ -28,18 +38,12 @@ class PostulacionController extends Controller
             'apellidos' => 'required|string|max:100',
             'email' => 'nullable|email|max:100',
             'celular' => 'required|string|max:20',
-            'foto_perfil' => 'nullable|image|max:2048', // Max 2MB
+            'foto_perfil' => 'nullable|image|max:2048',
         ]);
 
-        // Manejar foto
-        if ($request->hasFile('foto_perfil')) {
-            $data['foto_perfil'] = $request->file('foto_perfil')
-                ->store('postulantes/fotos', 'public');
-        }
-
-        $postulante = Postulante::updateOrCreate(
-            ['ci' => $data['ci']],
-            $data
+        $postulante = $this->postulacionService->registrarPostulante(
+            $data,
+            $request->file('foto_perfil')
         );
 
         return response()->json([
@@ -66,115 +70,38 @@ class PostulacionController extends Controller
         $postulante = Postulante::where('ci', $request->ci)->firstOrFail();
 
         return DB::transaction(function () use ($request, $postulante) {
-            // Procesar Formaciones
+            // Procesar cada sección usando el servicio
             if ($request->has('formaciones')) {
-                foreach ($request->formaciones as $index => $item) {
-                    $archivo = null;
-                    if ($request->hasFile("formaciones.{$index}.archivo")) {
-                        $archivo = $request->file("formaciones.{$index}.archivo")
-                            ->store('expedientes/formaciones', 'public');
-                    }
-
-                    $postulante->formaciones()->create([
-                        'nivel' => $item['nivel'],
-                        'titulo_profesion' => $item['titulo_profesion'],
-                        'universidad' => $item['universidad'],
-                        'anio_emision' => $item['anio_emision'],
-                        'archivo_pdf' => $archivo,
-                    ]);
-                }
+                $formaciones = $this->prepararDatosConArchivos($request, 'formaciones');
+                $this->expedienteService->guardarFormaciones($postulante, $formaciones);
             }
 
-            // Procesar Experiencias (con validación de 5 años)
             if ($request->has('experiencias')) {
-                $anioLimite = date('Y') - 5;
-
-                foreach ($request->experiencias as $index => $item) {
-                    $anioFin = !empty($item['anio_fin']) ? intval($item['anio_fin']) : null;
-
-                    // Validar que sea de los últimos 5 años (si no es actual)
-                    if ($anioFin && $anioFin < $anioLimite) {
-                        continue; // Saltar experiencias muy antiguas
-                    }
-
-                    $archivo = null;
-                    if ($request->hasFile("experiencias.{$index}.archivo")) {
-                        $archivo = $request->file("experiencias.{$index}.archivo")
-                            ->store('expedientes/experiencias', 'public');
-                    }
-
-                    $postulante->experiencias()->create([
-                        'cargo_desempenado' => $item['cargo_desempenado'],
-                        'empresa_institucion' => $item['empresa_institucion'],
-                        'anio_inicio' => $item['anio_inicio'],
-                        'anio_fin' => $item['anio_fin'] ?? null,
-                        'funciones' => $item['funciones'] ?? null,
-                        'archivo_pdf' => $archivo,
-                    ]);
-                }
+                $experiencias = $this->prepararDatosConArchivos($request, 'experiencias');
+                $this->expedienteService->guardarExperiencias($postulante, $experiencias);
             }
 
-            // Procesar Capacitaciones
             if ($request->has('capacitaciones')) {
-                foreach ($request->capacitaciones as $index => $item) {
-                    $archivo = null;
-                    if ($request->hasFile("capacitaciones.{$index}.archivo")) {
-                        $archivo = $request->file("capacitaciones.{$index}.archivo")
-                            ->store('expedientes/capacitaciones', 'public');
-                    }
-
-                    $postulante->capacitaciones()->create([
-                        'nombre_curso' => $item['nombre_curso'],
-                        'institucion_emisora' => $item['institucion_emisora'],
-                        'carga_horaria' => $item['carga_horaria'] ?? null,
-                        'anio' => $item['anio'],
-                        'archivo_pdf' => $archivo,
-                    ]);
-                }
+                $capacitaciones = $this->prepararDatosConArchivos($request, 'capacitaciones');
+                $this->expedienteService->guardarCapacitaciones($postulante, $capacitaciones);
             }
 
-            // Procesar Producciones
             if ($request->has('producciones')) {
-                foreach ($request->producciones as $index => $item) {
-                    $archivo = null;
-                    if ($request->hasFile("producciones.{$index}.archivo")) {
-                        $archivo = $request->file("producciones.{$index}.archivo")
-                            ->store('expedientes/producciones', 'public');
-                    }
-
-                    $postulante->producciones()->create([
-                        'tipo' => $item['tipo'],
-                        'titulo' => $item['titulo'],
-                        'descripcion' => $item['descripcion'] ?? null,
-                        'anio' => $item['anio'],
-                        'archivo_pdf' => $archivo,
-                    ]);
-                }
+                $producciones = $this->prepararDatosConArchivos($request, 'producciones');
+                $this->expedienteService->guardarProducciones($postulante, $producciones);
             }
 
-            // Procesar Reconocimientos
             if ($request->has('reconocimientos')) {
-                foreach ($request->reconocimientos as $index => $item) {
-                    $archivo = null;
-                    if ($request->hasFile("reconocimientos.{$index}.archivo")) {
-                        $archivo = $request->file("reconocimientos.{$index}.archivo")
-                            ->store('expedientes/reconocimientos', 'public');
-                    }
-
-                    $postulante->reconocimientos()->create([
-                        'tipo_reconocimiento' => $item['tipo_reconocimiento'],
-                        'titulo' => $item['titulo'],
-                        'otorgado_por' => $item['otorgado_por'] ?? null,
-                        'anio' => $item['anio'],
-                        'archivo_pdf' => $archivo,
-                    ]);
-                }
+                $reconocimientos = $this->prepararDatosConArchivos($request, 'reconocimientos');
+                $this->expedienteService->guardarReconocimientos($postulante, $reconocimientos);
             }
 
-            // Recargar relaciones
             $postulante->load([
-                'formaciones', 'experiencias', 'capacitaciones',
-                'producciones', 'reconocimientos'
+                'formaciones',
+                'experiencias',
+                'capacitaciones',
+                'producciones',
+                'reconocimientos'
             ]);
 
             return response()->json([
@@ -210,13 +137,11 @@ class PostulacionController extends Controller
         foreach ($request->ofertas as $ofertaId) {
             $oferta = Oferta::with(['convocatoria', 'sede', 'cargo'])->find($ofertaId);
 
-            // Verificar que la convocatoria esté abierta
             if (!$oferta->convocatoria->esta_abierta) {
                 $errores[] = "La convocatoria para {$oferta->cargo->nombre} en {$oferta->sede->nombre} no está abierta";
                 continue;
             }
 
-            // Verificar si ya postuló
             $existe = Postulacion::where([
                 'postulante_id' => $postulante->id,
                 'oferta_id' => $ofertaId,
@@ -227,8 +152,7 @@ class PostulacionController extends Controller
                 continue;
             }
 
-            // Crear postulación
-            $postulacion = Postulacion::create([
+            Postulacion::create([
                 'postulante_id' => $postulante->id,
                 'oferta_id' => $ofertaId,
                 'estado' => 'pendiente',
@@ -264,20 +188,14 @@ class PostulacionController extends Controller
                 'email' => 'nullable|email|max:100',
                 'ofertas' => 'required|array|min:1',
                 'ofertas.*' => 'exists:convocatoria_sede_cargo,id',
-
-                // Formaciones
                 'formaciones.*.nivel' => 'required|in:licenciatura,maestria,doctorado,diplomado,especialidad',
                 'formaciones.*.titulo_profesion' => 'required|string|max:255',
                 'formaciones.*.universidad' => 'required|string|max:255',
                 'formaciones.*.anio_emision' => 'required|integer|between:1900,2100',
-
-                // Experiencias
                 'experiencias.*.cargo_desempenado' => 'required|string|max:255',
                 'experiencias.*.empresa_institucion' => 'required|string|max:255',
                 'experiencias.*.anio_inicio' => 'required|integer|between:1900,2100',
                 'experiencias.*.anio_fin' => 'nullable|integer|between:1900,2100',
-
-                // Otros
                 'capacitaciones.*.anio' => 'nullable|integer|between:1900,2100',
                 'producciones.*.anio' => 'nullable|integer|between:1900,2100',
                 'reconocimientos.*.anio' => 'nullable|integer|between:1900,2100',
@@ -291,157 +209,44 @@ class PostulacionController extends Controller
 
         return DB::transaction(function () use ($request) {
             // 1. Crear/actualizar postulante
-            $postulante = Postulante::updateOrCreate(
-                ['ci' => $request->ci],
-                [
-                    'nombres' => $request->nombres,
-                    'apellidos' => $request->apellidos,
-                    'email' => $request->email ?? null,
-                    'celular' => $request->celular,
-                ]
+            $postulante = $this->postulacionService->registrarPostulante(
+                $request->only(['ci', 'nombres', 'apellidos', 'email', 'celular']),
+                $request->file('foto_perfil')
             );
 
-            // 2. Manejar foto si viene
-            if ($request->hasFile('foto_perfil')) {
-                $postulante->foto_perfil = $request->file('foto_perfil')
-                    ->store('postulantes/fotos', 'public');
-                $postulante->save();
-            }
-
-            // 3. Guardar formaciones
+            // 2. Guardar expediente
             if ($request->has('formaciones')) {
-                foreach ($request->formaciones as $index => $item) {
-                    $archivo = null;
-                    if ($request->hasFile("formaciones.{$index}.archivo")) {
-                        $archivo = $request->file("formaciones.{$index}.archivo")
-                            ->store('expedientes/formaciones', 'public');
-                    }
-
-                    $postulante->formaciones()->updateOrCreate(
-                        [
-                            'titulo_profesion' => $item['titulo_profesion'],
-                            'universidad' => $item['universidad'],
-                        ],
-                        [
-                            'nivel' => $item['nivel'],
-                            'anio_emision' => $item['anio_emision'],
-                            'archivo_pdf' => $archivo ?? $item['archivo_pdf'] ?? null,
-                        ]
-                    );
-                }
+                $formaciones = $this->prepararDatosConArchivos($request, 'formaciones');
+                $this->expedienteService->guardarFormaciones($postulante, $formaciones);
             }
 
-            // 4. Guardar experiencias
             if ($request->has('experiencias')) {
-                $anioLimite = date('Y') - 5;
-
-                foreach ($request->experiencias as $index => $item) {
-                    $anioFin = !empty($item['anio_fin']) ? intval($item['anio_fin']) : null;
-
-                    if ($anioFin && $anioFin < $anioLimite) {
-                        continue;
-                    }
-
-                    $archivo = null;
-                    if ($request->hasFile("experiencias.{$index}.archivo")) {
-                        $archivo = $request->file("experiencias.{$index}.archivo")
-                            ->store('expedientes/experiencias', 'public');
-                    }
-
-                    $postulante->experiencias()->updateOrCreate(
-                        [
-                            'cargo_desempenado' => $item['cargo_desempenado'],
-                            'empresa_institucion' => $item['empresa_institucion'],
-                            'anio_inicio' => $item['anio_inicio'],
-                        ],
-                        [
-                            'anio_fin' => $item['anio_fin'] ?? null,
-                            'funciones' => $item['funciones'] ?? null,
-                            'archivo_pdf' => $archivo ?? $item['archivo_pdf'] ?? null,
-                        ]
-                    );
-                }
+                $experiencias = $this->prepararDatosConArchivos($request, 'experiencias');
+                $this->expedienteService->guardarExperiencias($postulante, $experiencias);
             }
 
-            // 5. Guardar capacitaciones
             if ($request->has('capacitaciones')) {
-                foreach ($request->capacitaciones as $index => $item) {
-                    // Saltar si no tiene nombre del curso
-                    if (empty($item['nombre_curso'])) continue;
-
-                    $archivo = null;
-                    if ($request->hasFile("capacitaciones.{$index}.archivo")) {
-                        $archivo = $request->file("capacitaciones.{$index}.archivo")
-                            ->store('expedientes/capacitaciones', 'public');
-                    }
-
-                    $postulante->capacitaciones()->updateOrCreate(
-                        [
-                            'nombre_curso' => $item['nombre_curso'],
-                            'institucion_emisora' => $item['institucion_emisora'] ?? 'S/N',
-                        ],
-                        [
-                            'carga_horaria' => $item['carga_horaria'] ?? null,
-                            'anio' => $item['anio'],
-                            'archivo_pdf' => $archivo ?? $item['archivo_pdf'] ?? null,
-                        ]
-                    );
-                }
+                $capacitaciones = $this->prepararDatosConArchivos($request, 'capacitaciones');
+                $this->expedienteService->guardarCapacitaciones($postulante, $capacitaciones);
             }
 
-            // 6. Guardar producciones
             if ($request->has('producciones')) {
-                foreach ($request->producciones as $index => $item) {
-                    // Saltar si no tiene título
-                    if (empty($item['titulo'])) continue;
-
-                    $archivo = null;
-                    if ($request->hasFile("producciones.{$index}.archivo")) {
-                        $archivo = $request->file("producciones.{$index}.archivo")
-                            ->store('expedientes/producciones', 'public');
-                    }
-
-                    $postulante->producciones()->updateOrCreate(
-                        [
-                            'titulo' => $item['titulo'],
-                            'tipo' => $item['tipo'],
-                        ],
-                        [
-                            'descripcion' => $item['descripcion'] ?? null,
-                            'anio' => $item['anio'],
-                            'archivo_pdf' => $archivo ?? $item['archivo_pdf'] ?? null,
-                        ]
-                    );
-                }
+                $producciones = $this->prepararDatosConArchivos($request, 'producciones');
+                $this->expedienteService->guardarProducciones($postulante, $producciones);
             }
 
-            // 7. Guardar reconocimientos
             if ($request->has('reconocimientos')) {
-                foreach ($request->reconocimientos as $index => $item) {
-                    // Saltar si no tiene título ni tipo
-                    if (empty($item['titulo']) && empty($item['tipo_reconocimiento'])) continue;
-
-                    $archivo = null;
-                    if ($request->hasFile("reconocimientos.{$index}.archivo")) {
-                        $archivo = $request->file("reconocimientos.{$index}.archivo")
-                            ->store('expedientes/reconocimientos', 'public');
-                    }
-
-                    $postulante->reconocimientos()->updateOrCreate(
-                        [
-                            'titulo' => $item['titulo'] ?? 'S/T',
-                            'tipo_reconocimiento' => $item['tipo_reconocimiento'] ?? 'S/R',
-                        ],
-                        [
-                            'otorgado_por' => $item['otorgado_por'] ?? null,
-                            'anio' => $item['anio'],
-                            'archivo_pdf' => $archivo ?? $item['archivo_pdf'] ?? null,
-                        ]
-                    );
-                }
+                $reconocimientos = $this->prepararDatosConArchivos($request, 'reconocimientos');
+                $this->expedienteService->guardarReconocimientos($postulante, $reconocimientos);
             }
 
-            // 8. Crear postulaciones
+            // 3. Guardar documentos requeridos
+            if ($request->has('documentos')) {
+                $documentos = $this->prepararDocumentos($request);
+                $this->postulacionService->guardarDocumentos($postulante, $documentos);
+            }
+
+            // 4. Crear postulaciones
             $postulacionesCreadas = [];
             $errores = [];
 
@@ -458,7 +263,7 @@ class PostulacionController extends Controller
                     continue;
                 }
 
-                $postulacion = Postulacion::firstOrCreate(
+                Postulacion::firstOrCreate(
                     [
                         'postulante_id' => $postulante->id,
                         'oferta_id' => $ofertaId,
@@ -483,8 +288,11 @@ class PostulacionController extends Controller
             return response()->json([
                 'message' => 'Postulación completada exitosamente',
                 'postulante' => $postulante->fresh([
-                    'formaciones', 'experiencias', 'capacitaciones',
-                    'producciones', 'reconocimientos'
+                    'formaciones',
+                    'experiencias',
+                    'capacitaciones',
+                    'producciones',
+                    'reconocimientos'
                 ]),
                 'postulaciones' => $postulacionesCreadas,
                 'errores' => $errores,
@@ -522,7 +330,6 @@ class PostulacionController extends Controller
             return response()->json(['message' => 'Registro no encontrado'], 404);
         }
 
-        // Eliminar archivo si existe
         if ($registro->archivo_pdf && Storage::disk('public')->exists($registro->archivo_pdf)) {
             Storage::disk('public')->delete($registro->archivo_pdf);
         }
@@ -530,5 +337,37 @@ class PostulacionController extends Controller
         $registro->delete();
 
         return response()->json(['message' => 'Registro eliminado']);
+    }
+
+    /**
+     * Helper: Preparar datos con archivos del request
+     */
+    private function prepararDatosConArchivos(Request $request, string $seccion): array
+    {
+        $datos = $request->input($seccion, []);
+
+        foreach ($datos as $index => &$item) {
+            if ($request->hasFile("{$seccion}.{$index}.archivo")) {
+                $item['archivo'] = $request->file("{$seccion}.{$index}.archivo");
+            }
+        }
+
+        return $datos;
+    }
+
+    /**
+     * Helper: Preparar documentos requeridos del request
+     */
+    private function prepararDocumentos(Request $request): array
+    {
+        $documentos = $request->input('documentos', []);
+
+        foreach ($documentos as $index => &$doc) {
+            if ($request->hasFile("documentos.{$index}.archivo")) {
+                $doc['archivo'] = $request->file("documentos.{$index}.archivo");
+            }
+        }
+
+        return $documentos;
     }
 }

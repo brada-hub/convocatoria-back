@@ -19,7 +19,7 @@ class ConvocatoriaController extends Controller
     public function abiertas()
     {
         $convocatorias = Convocatoria::abiertas()
-            ->with(['ofertas' => function($query) {
+            ->with(['ofertas' => function ($query) {
                 $query->activos()->with(['sede', 'cargo']);
             }])
             ->orderBy('fecha_cierre')
@@ -34,16 +34,16 @@ class ConvocatoriaController extends Controller
     public function porSlug($slug)
     {
         $convocatoria = Convocatoria::where('slug', $slug)
-            ->with(['ofertas' => function($query) {
+            ->with(['ofertas' => function ($query) {
                 $query->activos()->with(['sede', 'cargo']);
-            }])
+            }, 'documentosRequeridos'])
             ->firstOrFail();
 
         // Agrupar ofertas por sede para el frontend
-        $ofertasPorSede = $convocatoria->ofertas->groupBy('sede_id')->map(function($ofertas) {
+        $ofertasPorSede = $convocatoria->ofertas->groupBy('sede_id')->map(function ($ofertas) {
             return [
                 'sede' => $ofertas->first()->sede,
-                'cargos' => $ofertas->map(function($oferta) {
+                'cargos' => $ofertas->map(function ($oferta) {
                     return [
                         'id' => $oferta->id,
                         'cargo' => $oferta->cargo,
@@ -53,9 +53,22 @@ class ConvocatoriaController extends Controller
             ];
         })->values();
 
+        // Mapear documentos requeridos
+        $documentos = $convocatoria->documentosRequeridos->map(function ($doc) {
+            return [
+                'id' => $doc->id,
+                'nombre' => $doc->nombre,
+                'descripcion' => $doc->descripcion,
+                'icono' => $doc->icono,
+                'obligatorio' => $doc->pivot->obligatorio,
+                'orden' => $doc->pivot->orden,
+            ];
+        });
+
         return response()->json([
             'convocatoria' => $convocatoria,
             'ofertas_por_sede' => $ofertasPorSede,
+            'documentos_requeridos' => $documentos,
         ]);
     }
 
@@ -77,8 +90,11 @@ class ConvocatoriaController extends Controller
 
         // Cargar expediente completo
         $postulante->load([
-            'formaciones', 'experiencias', 'capacitaciones',
-            'producciones', 'reconocimientos'
+            'formaciones',
+            'experiencias',
+            'capacitaciones',
+            'producciones',
+            'reconocimientos'
         ]);
 
         return response()->json([
@@ -108,7 +124,7 @@ class ConvocatoriaController extends Controller
             ->with(['oferta.convocatoria', 'oferta.sede', 'oferta.cargo'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($p) {
+            ->map(function ($p) {
                 return [
                     'id' => $p->id,
                     'convocatoria' => $p->oferta->convocatoria->titulo,
@@ -160,17 +176,20 @@ class ConvocatoriaController extends Controller
             'ofertas.*.sede_id' => 'required|exists:sedes,id',
             'ofertas.*.cargo_id' => 'required|exists:cargos,id',
             'ofertas.*.vacantes' => 'integer|min:1',
+            'documentos' => 'nullable|array',
+            'documentos.*.tipo_documento_id' => 'required|exists:tipos_documento,id',
+            'documentos.*.obligatorio' => 'boolean',
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
-            $convData = collect($data)->except('ofertas')->toArray();
+            $convData = collect($data)->except(['ofertas', 'documentos'])->toArray();
             $convData['slug'] = Str::slug($convData['titulo'] . '-' . Str::random(5));
 
             $convocatoria = Convocatoria::create($convData);
 
+            // Crear ofertas
             if (!empty($data['ofertas'])) {
                 foreach ($data['ofertas'] as $oferta) {
-                    // Evitar duplicados si el frontend manda mal
                     $exists = $convocatoria->ofertas()
                         ->where('sede_id', $oferta['sede_id'])
                         ->where('cargo_id', $oferta['cargo_id'])
@@ -186,9 +205,19 @@ class ConvocatoriaController extends Controller
                 }
             }
 
+            // Crear documentos requeridos
+            if (!empty($data['documentos'])) {
+                foreach ($data['documentos'] as $index => $doc) {
+                    $convocatoria->documentosRequeridos()->attach($doc['tipo_documento_id'], [
+                        'obligatorio' => $doc['obligatorio'] ?? true,
+                        'orden' => $index + 1
+                    ]);
+                }
+            }
+
             return response()->json([
                 'message' => 'Convocatoria creada exitosamente',
-                'convocatoria' => $convocatoria->load('ofertas')
+                'convocatoria' => $convocatoria->load(['ofertas', 'documentosRequeridos'])
             ], 201);
         });
     }
@@ -198,7 +227,7 @@ class ConvocatoriaController extends Controller
      */
     public function show(Convocatoria $convocatoria)
     {
-        $convocatoria->load(['ofertas.sede', 'ofertas.cargo']);
+        $convocatoria->load(['ofertas.sede', 'ofertas.cargo', 'documentosRequeridos']);
 
         return response()->json($convocatoria);
     }
@@ -214,14 +243,32 @@ class ConvocatoriaController extends Controller
             'fecha_inicio' => 'required|date',
             'fecha_cierre' => 'required|date|after_or_equal:fecha_inicio',
             'estado' => 'in:borrador,activa,cerrada,finalizada',
+            'documentos' => 'nullable|array',
+            'documentos.*.tipo_documento_id' => 'required|exists:tipos_documento,id',
+            'documentos.*.obligatorio' => 'boolean',
         ]);
 
-        $convocatoria->update($data);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data, $convocatoria) {
+            $convocatoria->update(collect($data)->except('documentos')->toArray());
 
-        return response()->json([
-            'message' => 'Convocatoria actualizada',
-            'convocatoria' => $convocatoria
-        ]);
+            // Actualizar documentos requeridos si vienen en la request
+            if (isset($data['documentos'])) {
+                // Sincronizar documentos
+                $syncData = [];
+                foreach ($data['documentos'] as $index => $doc) {
+                    $syncData[$doc['tipo_documento_id']] = [
+                        'obligatorio' => $doc['obligatorio'] ?? true,
+                        'orden' => $index + 1
+                    ];
+                }
+                $convocatoria->documentosRequeridos()->sync($syncData);
+            }
+
+            return response()->json([
+                'message' => 'Convocatoria actualizada',
+                'convocatoria' => $convocatoria->load('documentosRequeridos')
+            ]);
+        });
     }
 
     /**
@@ -314,21 +361,21 @@ class ConvocatoriaController extends Controller
 
         // Filtro por Convocatoria (opcional)
         if ($request->has('convocatoria_id') && $request->convocatoria_id) {
-             $query->whereHas('oferta', function($q) use ($request) {
+            $query->whereHas('oferta', function ($q) use ($request) {
                 $q->where('convocatoria_id', $request->convocatoria_id);
             });
         }
 
         // Filtro por Sede (opcional)
         if ($request->has('sede_id') && $request->sede_id) {
-            $query->whereHas('oferta', function($q) use ($request) {
+            $query->whereHas('oferta', function ($q) use ($request) {
                 $q->where('sede_id', $request->sede_id);
             });
         }
 
         // Filtro por Cargo (opcional)
         if ($request->has('cargo_id') && $request->cargo_id) {
-            $query->whereHas('oferta', function($q) use ($request) {
+            $query->whereHas('oferta', function ($q) use ($request) {
                 $q->where('cargo_id', $request->cargo_id);
             });
         }
@@ -353,13 +400,13 @@ class ConvocatoriaController extends Controller
 
         // Filtros opcionales
         if ($request->has('sede_id')) {
-            $query->whereHas('oferta', function($q) use ($request) {
+            $query->whereHas('oferta', function ($q) use ($request) {
                 $q->where('sede_id', $request->sede_id);
             });
         }
 
         if ($request->has('cargo_id')) {
-            $query->whereHas('oferta', function($q) use ($request) {
+            $query->whereHas('oferta', function ($q) use ($request) {
                 $q->where('cargo_id', $request->cargo_id);
             });
         }
@@ -397,8 +444,12 @@ class ConvocatoriaController extends Controller
     public function verExpediente(Postulante $postulante)
     {
         $postulante->load([
-            'formaciones', 'experiencias', 'capacitaciones',
-            'producciones', 'reconocimientos', 'postulaciones.oferta.convocatoria'
+            'formaciones',
+            'experiencias',
+            'capacitaciones',
+            'producciones',
+            'reconocimientos',
+            'postulaciones.oferta.convocatoria'
         ]);
 
         return response()->json($postulante);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cargo;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Cache;
 
 class CargoController extends Controller
 {
@@ -17,9 +18,11 @@ class CargoController extends Controller
 
     public function activos()
     {
-        return response()->json(
-            Cargo::activos()->orderBy('nombre')->get()
-        );
+        $cargos = Cache::remember('cargos_activos', 300, function () {
+            return Cargo::activos()->orderBy('nombre')->get();
+        });
+
+        return response()->json($cargos);
     }
 
     public function store(Request $request)

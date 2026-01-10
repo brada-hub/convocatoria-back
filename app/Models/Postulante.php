@@ -4,14 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\Auditable;
 
 class Postulante extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, Auditable;
 
     protected $fillable = [
-        'ci', 'nombres', 'apellidos', 'email', 'celular',
-        'foto_perfil', 'fecha_nacimiento', 'genero'
+        'ci',
+        'nombres',
+        'apellidos',
+        'email',
+        'celular',
+        'foto_perfil',
+        'fecha_nacimiento',
+        'genero'
     ];
 
     protected $casts = [
@@ -53,6 +61,12 @@ class Postulante extends Model
     public function postulaciones()
     {
         return $this->hasMany(Postulacion::class);
+    }
+
+    // Documentos subidos por el postulante
+    public function documentos()
+    {
+        return $this->hasMany(DocumentoPostulante::class);
     }
 
     // Obtener postulaciones con detalles de oferta

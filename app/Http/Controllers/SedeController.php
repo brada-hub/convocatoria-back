@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sede;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Cache;
 
 class SedeController extends Controller
 {
@@ -17,9 +18,11 @@ class SedeController extends Controller
 
     public function activas()
     {
-        return response()->json(
-            Sede::activos()->orderBy('nombre')->get()
-        );
+        $sedes = Cache::remember('sedes_activas', 300, function () {
+            return Sede::activos()->orderBy('nombre')->get();
+        });
+
+        return response()->json($sedes);
     }
 
     public function store(Request $request)

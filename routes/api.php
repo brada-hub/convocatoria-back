@@ -6,6 +6,7 @@ use App\Http\Controllers\SedeController;
 use App\Http\Controllers\CargoController;
 use App\Http\Controllers\ConvocatoriaController;
 use App\Http\Controllers\PostulacionController;
+use App\Http\Controllers\TipoDocumentoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,25 +27,33 @@ Route::get('/status', function () {
     ]);
 });
 
-// Convocatorias abiertas
-Route::get('/convocatorias/abiertas', [ConvocatoriaController::class, 'abiertas']);
-Route::get('/convocatorias/{slug}', [ConvocatoriaController::class, 'porSlug']);
+// Rutas públicas con rate limiting moderado
+Route::middleware(['throttle:public-api'])->group(function () {
+    // Convocatorias abiertas
+    Route::get('/convocatorias/abiertas', [ConvocatoriaController::class, 'abiertas']);
+    Route::get('/convocatorias/{slug}', [ConvocatoriaController::class, 'porSlug']);
 
-// Verificación de CI
-Route::post('/check-ci', [ConvocatoriaController::class, 'checkCI']);
+    // Tipos de documento (público para mostrar en el formulario)
+    Route::get('/tipos-documento', [TipoDocumentoController::class, 'index']);
 
-// Consulta de estado de postulaciones
-Route::post('/consultar-estado', [ConvocatoriaController::class, 'consultarEstado']);
+    // Catálogos públicos
+    Route::get('/sedes/activas', [SedeController::class, 'activas']);
+    Route::get('/cargos/activos', [CargoController::class, 'activos']);
+});
 
-// Proceso de postulación
-Route::post('/postulante/registrar', [PostulacionController::class, 'registrarPostulante']);
-Route::post('/postulante/expediente', [PostulacionController::class, 'guardarExpediente']);
-Route::post('/postulante/postular', [PostulacionController::class, 'enviarPostulaciones']);
-Route::post('/postulante/proceso-completo', [PostulacionController::class, 'procesoCompleto']);
+// Verificación de CI - Rate limiting específico
+Route::middleware(['throttle:check-ci'])->group(function () {
+    Route::post('/check-ci', [ConvocatoriaController::class, 'checkCI']);
+    Route::post('/consultar-estado', [ConvocatoriaController::class, 'consultarEstado']);
+});
 
-// Catálogos públicos
-Route::get('/sedes/activas', [SedeController::class, 'activas']);
-Route::get('/cargos/activos', [CargoController::class, 'activos']);
+// Proceso de postulación - Rate limiting estricto
+Route::middleware(['throttle:postulacion'])->group(function () {
+    Route::post('/postulante/registrar', [PostulacionController::class, 'registrarPostulante']);
+    Route::post('/postulante/expediente', [PostulacionController::class, 'guardarExpediente']);
+    Route::post('/postulante/postular', [PostulacionController::class, 'enviarPostulaciones']);
+    Route::post('/postulante/proceso-completo', [PostulacionController::class, 'procesoCompleto']);
+});
 
 // ============================================
 // AUTENTICACIÓN
@@ -78,6 +87,13 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::delete('/cargos/{cargo}', [CargoController::class, 'destroy']);
     Route::patch('/cargos/{cargo}/toggle', [CargoController::class, 'toggleActivo']);
 
+    // ---- TIPOS DE DOCUMENTO ----
+    Route::get('/tipos-documento', [TipoDocumentoController::class, 'all']);
+    Route::post('/tipos-documento', [TipoDocumentoController::class, 'store']);
+    Route::put('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'update']);
+    Route::patch('/tipos-documento/{tipoDocumento}/toggle', [TipoDocumentoController::class, 'toggle']);
+    Route::delete('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'destroy']);
+
     // ---- CONVOCATORIAS ----
     Route::get('/convocatorias', [ConvocatoriaController::class, 'index']);
     Route::post('/convocatorias', [ConvocatoriaController::class, 'store']);
@@ -108,6 +124,10 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::patch('/users/{user}/reset-password', [\App\Http\Controllers\UserController::class, 'resetPassword']);
     Route::patch('/users/{user}/toggle', [\App\Http\Controllers\UserController::class, 'toggleActivo']);
     Route::apiResource('users', \App\Http\Controllers\UserController::class);
+
+    // ---- REPORTES ----
+    Route::get('/reports', [\App\Http\Controllers\ReportsController::class, 'index']);
+    Route::get('/reports/exportar', [\App\Http\Controllers\ReportsController::class, 'exportar']);
 
     // Dashboard stats
     Route::get('/dashboard/stats', function () {
