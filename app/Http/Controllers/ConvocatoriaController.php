@@ -453,6 +453,7 @@ class ConvocatoriaController extends Controller
             'capacitaciones',
             'producciones',
             'reconocimientos',
+            'documentos.tipoDocumento',
             'postulaciones.oferta.convocatoria'
         ]);
 
