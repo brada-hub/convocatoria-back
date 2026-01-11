@@ -157,7 +157,8 @@ class ConvocatoriaController extends Controller
      */
     public function index()
     {
-        $convocatorias = Convocatoria::withCount('ofertas')
+        $convocatorias = Convocatoria::with('documentosRequeridos')
+            ->withCount('ofertas')
             ->orderBy('created_at', 'desc')
             ->get();
 
