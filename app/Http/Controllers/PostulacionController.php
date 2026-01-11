@@ -10,11 +10,13 @@ use App\Models\Capacitacion;
 use App\Models\Produccion;
 use App\Models\Reconocimiento;
 use App\Models\Oferta;
+use App\Models\Convocatoria;
 use App\Services\PostulacionService;
 use App\Services\ExpedienteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class PostulacionController extends Controller
 {
@@ -188,7 +190,7 @@ class PostulacionController extends Controller
                 'email' => 'nullable|email|max:100',
                 'ofertas' => 'required|array|min:1',
                 'ofertas.*' => 'exists:convocatoria_sede_cargo,id',
-                'formaciones.*.nivel' => 'required|in:licenciatura,maestria,doctorado,diplomado,especialidad',
+                'formaciones.*.nivel' => 'required|exists:niveles_academicos,slug',
                 'formaciones.*.titulo_profesion' => 'required|string|max:255',
                 'formaciones.*.universidad' => 'required|string|max:255',
                 'formaciones.*.anio_emision' => 'required|integer|between:1900,2100',
@@ -201,11 +203,11 @@ class PostulacionController extends Controller
                 'reconocimientos.*.anio' => 'nullable|integer|between:1900,2100',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation Failed:', $e->errors());
+            Log::error('Validation Failed:', $e->errors());
             throw $e;
         }
 
-        \Log::info('Proceso Completo Request Data:', $request->all());
+        Log::info('Proceso Completo Request Data:', $request->all());
 
         return DB::transaction(function () use ($request) {
             // 1. Crear/actualizar postulante
@@ -278,7 +280,7 @@ class PostulacionController extends Controller
             }
 
             if (count($postulacionesCreadas) === 0) {
-                \Log::warning('No se pudo crear ninguna postulación:', ['errores' => $errores, 'ci' => $request->ci]);
+                Log::warning('No se pudo crear ninguna postulación:', ['errores' => $errores, 'ci' => $request->ci]);
                 return response()->json([
                     'message' => 'No se pudo procesar la postulación. Verifique que la convocatoria esté abierta.',
                     'errores' => $errores

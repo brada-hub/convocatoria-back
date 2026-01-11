@@ -39,6 +39,7 @@ Route::group([], function () {
     // Catálogos públicos
     Route::get('/sedes/activas', [SedeController::class, 'activas']);
     Route::get('/cargos/activos', [CargoController::class, 'activos']);
+    Route::get('/catalogos/niveles-academicos', [\App\Http\Controllers\CatalogoController::class, 'nivelesAcademicos']);
 });
 
 // Verificación de CI
@@ -93,6 +94,10 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::put('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'update']);
     Route::patch('/tipos-documento/{tipoDocumento}/toggle', [TipoDocumentoController::class, 'toggle']);
     Route::delete('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'destroy']);
+
+    // ---- NIVELES ACADEMICOS ----
+    Route::apiResource('niveles-academicos', \App\Http\Controllers\NivelAcademicoController::class);
+    Route::patch('/niveles-academicos/{nivelAcademico}/toggle', [\App\Http\Controllers\NivelAcademicoController::class, 'toggle']);
 
     // ---- CONVOCATORIAS ----
     Route::get('/convocatorias', [ConvocatoriaController::class, 'index']);
