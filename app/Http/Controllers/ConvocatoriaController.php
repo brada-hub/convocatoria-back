@@ -14,14 +14,17 @@ class ConvocatoriaController extends Controller
     // ==================== RUTAS PÚBLICAS ====================
 
     /**
-     * Listar convocatorias abiertas con sus ofertas
+     * Listar convocatorias abiertas con sus ofertas y documentos requeridos
      */
     public function abiertas()
     {
         $convocatorias = Convocatoria::abiertas()
-            ->with(['ofertas' => function ($query) {
-                $query->activos()->with(['sede', 'cargo']);
-            }])
+            ->with([
+                'ofertas' => function ($query) {
+                    $query->activos()->with(['sede', 'cargo']);
+                },
+                'documentosRequeridos' // Incluir documentos requeridos para el formulario de postulación
+            ])
             ->orderBy('fecha_cierre')
             ->get();
 
