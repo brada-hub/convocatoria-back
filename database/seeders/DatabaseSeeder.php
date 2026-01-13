@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ==============================
+        // NIVELES ACADÉMICOS
+        // ==============================
+        $this->call(NivelAcademicoSeeder::class);
+        // ==============================
         // ROLES
         // ==============================
         $adminRol = Rol::updateOrCreate(['nombre' => 'Administrador'], ['descripcion' => 'Acceso total al sistema', 'activo' => true]);
@@ -26,11 +30,11 @@ class DatabaseSeeder extends Seeder
         // USUARIO ADMINISTRADOR
         // ==============================
         User::updateOrCreate(
-            ['ci' => '5927724'],
+            ['ci' => '13260003'],
             [
-                'nombres' => 'JUAN JOSE',
-                'apellidos' => 'MAMANI VIA',
-                'email' => 'juan.mamani@sistema.com',
+                'nombres' => 'BRAYAN DAVID',
+                'apellidos' => 'PADILLA SILES',
+                'email' => 'padillabrayan@gmail.com',
                 'rol_id' => $adminRol->id,
                 'password' => Hash::make('admin123'),
                 'activo' => true,

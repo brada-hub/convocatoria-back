@@ -22,6 +22,7 @@ class Formacion extends Model
         'doctorado' => 'Doctorado',
         'diplomado' => 'Diplomado',
         'especialidad' => 'Especialidad',
+        'cursos_adicionales' => 'Cursos Adicionales',
     ];
 
     public function postulante()

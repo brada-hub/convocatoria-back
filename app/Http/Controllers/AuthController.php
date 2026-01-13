@@ -60,13 +60,10 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Usuario actual
-     */
     public function me(Request $request)
     {
         return response()->json([
-            'user' => $request->user()
+            'user' => $request->user()->load('rol')
         ]);
     }
 

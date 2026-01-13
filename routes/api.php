@@ -8,6 +8,9 @@ use App\Http\Controllers\ConvocatoriaController;
 use App\Http\Controllers\PostulacionController;
 use App\Http\Controllers\TipoDocumentoController;
 
+// Proxy para descargar documentos individuales (evita CORS)
+Route::get('/documento-proxy', [\App\Http\Controllers\DescargaProxyController::class, 'descargar']);
+
 /*
 |--------------------------------------------------------------------------
 | API Routes - Sistema de Convocatorias
@@ -120,6 +123,9 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
     // Ver expediente de postulante
     Route::get('/postulantes/{postulante}/expediente', [ConvocatoriaController::class, 'verExpediente']);
+    // Descargar expediente completo como PDF
+    Route::get('/postulantes/{postulante}/expediente-pdf', [ConvocatoriaController::class, 'descargarExpedientePdf']);
+
 
     // ---- ROLES ----
     Route::patch('/roles/{rol}/toggle', [\App\Http\Controllers\RolController::class, 'toggleActivo']);
