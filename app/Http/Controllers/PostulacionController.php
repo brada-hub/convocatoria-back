@@ -40,7 +40,7 @@ class PostulacionController extends Controller
             'apellidos' => 'required|string|max:100',
             'email' => 'nullable|email|max:100',
             'celular' => 'required|string|max:20',
-            'foto_perfil' => 'nullable|image|max:2048',
+            'foto_perfil' => 'nullable|mimes:jpeg,png,jpg,gif,pdf|max:2048',
         ]);
 
         $postulante = $this->postulacionService->registrarPostulante(

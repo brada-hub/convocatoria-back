@@ -15,16 +15,22 @@ class Convocatoria extends Model
     protected $fillable = [
         'titulo',
         'descripcion',
+        'perfil_profesional',
+        'experiencia_requerida',
         'fecha_inicio',
         'fecha_cierre',
+        'hora_limite',
         'slug',
-        'estado'
+        'estado',
+        'afiche_imagen'
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_cierre' => 'date',
     ];
+
+    protected $appends = ['url_postulacion'];
 
     protected static function boot()
     {
@@ -88,5 +94,19 @@ class Convocatoria extends Model
     {
         return $this->fecha_inicio <= now()
             && $this->fecha_cierre >= now();
+    }
+
+    // URL directa para postular
+    public function getUrlPostulacionAttribute()
+    {
+        $baseUrl = config('app.frontend_url', 'http://localhost:9000');
+        return "{$baseUrl}/postular/{$this->slug}";
+    }
+
+    // Fecha y hora límite formateada
+    public function getFechaHoraLimiteAttribute()
+    {
+        $hora = $this->hora_limite ?? '23:59:00';
+        return $this->fecha_cierre?->format('d/m/Y') . ' ' . substr($hora, 0, 5) . ' hrs.';
     }
 }

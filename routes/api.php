@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     // Postulaciones y expedientes
     Route::get('/convocatorias/{convocatoria}/postulaciones', [ConvocatoriaController::class, 'postulaciones']);
     Route::get('/convocatorias/{convocatoria}/estadisticas', [ConvocatoriaController::class, 'estadisticas']);
+    Route::get('/convocatorias/{convocatoria}/exportar-postulantes', [ConvocatoriaController::class, 'exportarPostulantes']);
 
     // Gestión de postulaciones
     Route::get('/postulaciones', [ConvocatoriaController::class, 'listarPostulaciones']);

@@ -9,6 +9,8 @@ use App\Models\Postulacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PostulantesConvocatoriaExport;
 
 class ConvocatoriaController extends Controller
 {
@@ -160,6 +162,7 @@ class ConvocatoriaController extends Controller
     {
         $convocatorias = Convocatoria::with('documentosRequeridos')
             ->withCount('ofertas')
+            ->withCount(['postulaciones as postulantes_count'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -888,5 +891,27 @@ class ConvocatoriaController extends Controller
         \Illuminate\Support\Facades\Log::error("Proxy 404 - No encontrado. \n Original: $path \n StoragePath: $storagePath \n FullPath: $fullPath");
 
         return response()->json(['message' => 'Archivo no encontrado'], 404);
+    }
+
+    /**
+     * Exportar postulantes de una convocatoria a Excel
+     */
+    public function exportarPostulantes(Request $request, Convocatoria $convocatoria)
+    {
+        try {
+            $sedeId = $request->query('sede_id') ? (int) $request->query('sede_id') : null;
+            $cargoId = $request->query('cargo_id') ? (int) $request->query('cargo_id') : null;
+            $estado = $request->query('estado');
+
+            $nombreArchivo = 'Postulantes_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', $convocatoria->titulo) . '_' . now()->format('Y-m-d') . '.xlsx';
+
+            return Excel::download(
+                new PostulantesConvocatoriaExport($convocatoria, $sedeId, $cargoId, $estado),
+                $nombreArchivo
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error exportando postulantes: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al exportar: ' . $e->getMessage()], 500);
+        }
     }
 }

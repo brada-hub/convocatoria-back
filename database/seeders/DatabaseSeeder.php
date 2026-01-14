@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         // NIVELES ACADÉMICOS
         // ==============================
         $this->call(NivelAcademicoSeeder::class);
+         $this->call(PostulantesSeeder::class);
         // ==============================
         // ROLES
         // ==============================
@@ -50,14 +51,13 @@ class DatabaseSeeder extends Seeder
         // ==============================
         $sedes = [
             ['nombre' => 'La Paz'],
-            ['nombre' => 'Oruro'],
-            ['nombre' => 'Potosí'],
+            ['nombre' => 'El Alto'],
             ['nombre' => 'Cochabamba'],
-            ['nombre' => 'Chuquisaca'],
-            ['nombre' => 'Tarija'],
-            ['nombre' => 'Pando'],
-            ['nombre' => 'Beni'],
+            ['nombre' => 'Ivirgarzama'],
+            ['nombre' => 'Guayaramerin'],
             ['nombre' => 'Santa Cruz'],
+            ['nombre' => 'Puerto Quijarro'],
+            ['nombre' => 'Cobija'],
             ['nombre' => 'Bolivia'], // Opción Nacional
         ];
 
@@ -175,12 +175,19 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // ==============================
+        // POSTULANTES DE PRUEBA
+        // ==============================
+        $this->call(PostulantesSeeder::class);
+
         // Información de seed completado
+        $this->command->info('');
         $this->command->info('✅ Datos de prueba creados exitosamente:');
-        $this->command->info('   - Usuario admin: JUAN JOSE MAMANI VIA (CI: 5927724) / admin123');
         $this->command->info('   - ' . Sede::count() . ' sedes');
         $this->command->info('   - ' . Cargo::count() . ' cargos');
         $this->command->info('   - ' . Convocatoria::count() . ' convocatorias');
         $this->command->info('   - ' . Oferta::count() . ' ofertas (cargos en sedes)');
+        $this->command->info('   - ' . \App\Models\Postulante::count() . ' postulantes');
+        $this->command->info('   - ' . \App\Models\Postulacion::count() . ' postulaciones');
     }
 }

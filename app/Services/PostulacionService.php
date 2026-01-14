@@ -29,13 +29,28 @@ class PostulacionService
                 'apellidos' => $datos['apellidos'],
                 'email' => $datos['email'] ?? null,
                 'celular' => $datos['celular'],
+                // New personal data fields
+                'nacionalidad' => $datos['nacionalidad'] ?? null,
+                'direccion' => $datos['direccion'] ?? null,
             ]
         );
 
-        // Procesar foto de perfil si existe
+        // Process profile photo if provided
         if ($fotoPerfil) {
             $path = $fotoPerfil->store('fotos_perfil', 'public');
             $postulante->update(['foto_perfil' => $path]);
+        }
+
+        // Process carta de postulación if provided
+        if (isset($datos['carta_postulacion']) && $datos['carta_postulacion'] instanceof \Illuminate\Http\UploadedFile) {
+            $path = $datos['carta_postulacion']->store('documentos_postulante/' . $postulante->ci, 'public');
+            $postulante->update(['carta_postulacion_pdf' => $path]);
+        }
+
+        // Process curriculum vitae if provided
+        if (isset($datos['curriculum_vitae']) && $datos['curriculum_vitae'] instanceof \Illuminate\Http\UploadedFile) {
+            $path = $datos['curriculum_vitae']->store('documentos_postulante/' . $postulante->ci, 'public');
+            $postulante->update(['curriculum_vitae_pdf' => $path]);
         }
 
         return $postulante;
