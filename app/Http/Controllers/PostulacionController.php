@@ -184,19 +184,30 @@ class PostulacionController extends Controller
         try {
             $request->validate([
                 'ci' => 'required|string|max:20',
+                'ci_expedido' => 'nullable|string|max:5',
+                'nacionalidad' => 'nullable|string|max:100',
+                'direccion' => 'nullable|string|max:255',
                 'nombres' => 'required|string|max:100',
                 'apellidos' => 'required|string|max:100',
                 'celular' => 'required|string|max:20',
                 'email' => 'nullable|email|max:100',
                 'ofertas' => 'required|array|min:1',
                 'ofertas.*' => 'exists:convocatoria_sede_cargo,id',
-                'formaciones.*.nivel' => 'required|exists:niveles_academicos,slug',
-                'formaciones.*.titulo_profesion' => 'required|string|max:255',
-                'formaciones.*.universidad' => 'required|string|max:255',
-                'formaciones.*.anio_emision' => 'required|integer|between:1900,2100',
-                'experiencias.*.cargo_desempenado' => 'required|string|max:255',
-                'experiencias.*.empresa_institucion' => 'required|string|max:255',
-                'experiencias.*.anio_inicio' => 'required|integer|between:1900,2100',
+
+                // Nuevos Documentos Dinámicos
+                'documentos' => 'nullable|array',
+                'documentos.*.tipo_documento_id' => 'required_with:documentos|exists:tipos_documento,id',
+                'documentos.*.archivo' => 'required_with:documentos|file|mimes:pdf|max:2048',
+                'documentos.*.metadatos' => 'nullable|string', // JSON string from frontend
+
+                // Legacy (Opcional)
+                'formaciones.*.nivel' => 'nullable|exists:niveles_academicos,slug',
+                'formaciones.*.titulo_profesion' => 'nullable|string|max:255',
+                'formaciones.*.universidad' => 'nullable|string|max:255',
+                'formaciones.*.anio_emision' => 'nullable|integer|between:1900,2100',
+                'experiencias.*.cargo_desempenado' => 'nullable|string|max:255',
+                'experiencias.*.empresa_institucion' => 'nullable|string|max:255',
+                'experiencias.*.anio_inicio' => 'nullable|integer|between:1900,2100',
                 'experiencias.*.anio_fin' => 'nullable|integer|between:1900,2100',
                 'capacitaciones.*.anio' => 'nullable|integer|between:1900,2100',
                 'producciones.*.anio' => 'nullable|integer|between:1900,2100',
@@ -212,7 +223,7 @@ class PostulacionController extends Controller
         return DB::transaction(function () use ($request) {
             // 1. Crear/actualizar postulante
             $postulante = $this->postulacionService->registrarPostulante(
-                $request->only(['ci', 'nombres', 'apellidos', 'email', 'celular']),
+                $request->only(['ci', 'ci_expedido', 'nacionalidad', 'direccion', 'nombres', 'apellidos', 'email', 'celular', 'carta_postulacion', 'curriculum_vitae', 'ci_documento']),
                 $request->file('foto_perfil')
             );
 

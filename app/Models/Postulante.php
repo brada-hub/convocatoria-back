@@ -13,13 +13,19 @@ class Postulante extends Model
 
     protected $fillable = [
         'ci',
+        'ci_expedido',
         'nombres',
         'apellidos',
         'email',
         'celular',
         'foto_perfil',
         'fecha_nacimiento',
-        'genero'
+        'genero',
+        'nacionalidad',
+        'direccion',
+        'carta_postulacion_pdf',
+        'curriculum_vitae_pdf',
+        'ci_documento_pdf'
     ];
 
     protected $casts = [

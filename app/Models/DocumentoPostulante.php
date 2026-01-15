@@ -14,7 +14,12 @@ class DocumentoPostulante extends Model
     protected $fillable = [
         'postulante_id',
         'tipo_documento_id',
-        'archivo_pdf'
+        'archivo_pdf',
+        'metadatos'
+    ];
+
+    protected $casts = [
+        'metadatos' => 'array'
     ];
 
     // Relación con postulante

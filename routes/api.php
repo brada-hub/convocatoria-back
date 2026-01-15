@@ -92,15 +92,16 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::patch('/cargos/{cargo}/toggle', [CargoController::class, 'toggleActivo']);
 
     // ---- TIPOS DE DOCUMENTO ----
-    Route::get('/tipos-documento', [TipoDocumentoController::class, 'all']);
+    Route::get('/tipos-documento', [TipoDocumentoController::class, 'index']);
+    Route::get('/tipos-documento/por-categoria', [TipoDocumentoController::class, 'porCategoria']);
     Route::post('/tipos-documento', [TipoDocumentoController::class, 'store']);
+    Route::get('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'show']);
     Route::put('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'update']);
-    Route::patch('/tipos-documento/{tipoDocumento}/toggle', [TipoDocumentoController::class, 'toggle']);
+    Route::patch('/tipos-documento/{tipoDocumento}/toggle', [TipoDocumentoController::class, 'toggleActivo']);
+    Route::post('/tipos-documento/reordenar', [TipoDocumentoController::class, 'reordenar']);
     Route::delete('/tipos-documento/{tipoDocumento}', [TipoDocumentoController::class, 'destroy']);
 
-    // ---- NIVELES ACADEMICOS ----
-    Route::apiResource('niveles-academicos', \App\Http\Controllers\NivelAcademicoController::class);
-    Route::patch('/niveles-academicos/{nivelAcademico}/toggle', [\App\Http\Controllers\NivelAcademicoController::class, 'toggle']);
+
 
     // ---- CONVOCATORIAS ----
     Route::get('/convocatorias', [ConvocatoriaController::class, 'index']);

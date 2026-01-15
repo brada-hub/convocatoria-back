@@ -16,11 +16,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+
+
         // ==============================
-        // NIVELES ACADÉMICOS
+        // TIPOS DE DOCUMENTO (Dinámicos)
         // ==============================
-        $this->call(NivelAcademicoSeeder::class);
-         $this->call(PostulantesSeeder::class);
+        $this->call(TiposDocumentoSeeder::class);
+
+        $this->call(PostulantesSeeder::class);
         // ==============================
         // ROLES
         // ==============================
@@ -161,6 +164,19 @@ class DatabaseSeeder extends Seeder
                     ['vacantes' => $oferta['vacantes']]
                 );
             }
+        }
+
+        // ==============================
+        // ASIGNAR DOCUMENTOS A LA CONVOCATORIA (Excluyendo personales que son fijos)
+        // ==============================
+        $tiposDocumento = \App\Models\TipoDocumento::where('categoria', '!=', 'personal')->get();
+        foreach ($tiposDocumento as $index => $tipo) {
+            $convocatoria->documentosRequeridos()->syncWithoutDetaching([
+                $tipo->id => [
+                    'obligatorio' => true,
+                    'orden' => $tipo->orden ?? ($index + 1)
+                ]
+            ]);
         }
 
         // Segunda convocatoria (próxima)

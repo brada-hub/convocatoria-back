@@ -100,7 +100,8 @@ class ConvocatoriaController extends Controller
             'experiencias',
             'capacitaciones',
             'producciones',
-            'reconocimientos'
+            'reconocimientos',
+            'documentos.tipoDocumento'
         ]);
 
         return response()->json([
@@ -458,7 +459,9 @@ class ConvocatoriaController extends Controller
             'producciones',
             'reconocimientos',
             'documentos.tipoDocumento',
-            'postulaciones.oferta.convocatoria'
+            'postulaciones.oferta.convocatoria',
+            'postulaciones.oferta.sede',
+            'postulaciones.oferta.cargo'
         ]);
 
         return response()->json($postulante);

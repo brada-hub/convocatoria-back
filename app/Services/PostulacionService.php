@@ -29,7 +29,7 @@ class PostulacionService
                 'apellidos' => $datos['apellidos'],
                 'email' => $datos['email'] ?? null,
                 'celular' => $datos['celular'],
-                // New personal data fields
+                'ci_expedido' => $datos['ci_expedido'] ?? null,
                 'nacionalidad' => $datos['nacionalidad'] ?? null,
                 'direccion' => $datos['direccion'] ?? null,
             ]
@@ -51,6 +51,12 @@ class PostulacionService
         if (isset($datos['curriculum_vitae']) && $datos['curriculum_vitae'] instanceof \Illuminate\Http\UploadedFile) {
             $path = $datos['curriculum_vitae']->store('documentos_postulante/' . $postulante->ci, 'public');
             $postulante->update(['curriculum_vitae_pdf' => $path]);
+        }
+
+        // Process documento CI if provided
+        if (isset($datos['ci_documento']) && $datos['ci_documento'] instanceof \Illuminate\Http\UploadedFile) {
+            $path = $datos['ci_documento']->store('documentos_postulante/' . $postulante->ci, 'public');
+            $postulante->update(['ci_documento_pdf' => $path]);
         }
 
         return $postulante;
@@ -94,6 +100,13 @@ class PostulacionService
      */
     public function guardarDocumentos(Postulante $postulante, array $documentos): void
     {
+        // Limpiar documentos anteriores de los tipos que se están enviando
+        // para evitar duplicados si el usuario re-envía el formulario
+        $tiposEnviados = array_unique(array_column($documentos, 'tipo_documento_id'));
+        DocumentoPostulante::where('postulante_id', $postulante->id)
+            ->whereIn('tipo_documento_id', $tiposEnviados)
+            ->delete();
+
         foreach ($documentos as $doc) {
             if (!isset($doc['tipo_documento_id']) || !isset($doc['archivo'])) {
                 continue;
@@ -102,13 +115,17 @@ class PostulacionService
             $archivo = $doc['archivo'];
             $path = $archivo->store('documentos_postulante/' . $postulante->ci, 'public');
 
-            DocumentoPostulante::updateOrCreate(
-                [
-                    'postulante_id' => $postulante->id,
-                    'tipo_documento_id' => $doc['tipo_documento_id'],
-                ],
-                ['archivo_pdf' => $path]
-            );
+            $metadatos = null;
+            if (isset($doc['metadatos'])) {
+                $metadatos = is_string($doc['metadatos']) ? json_decode($doc['metadatos'], true) : $doc['metadatos'];
+            }
+
+            DocumentoPostulante::create([
+                'postulante_id' => $postulante->id,
+                'tipo_documento_id' => $doc['tipo_documento_id'],
+                'archivo_pdf' => $path,
+                'metadatos' => $metadatos
+            ]);
         }
     }
 

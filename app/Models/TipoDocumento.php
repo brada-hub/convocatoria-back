@@ -13,14 +13,20 @@ class TipoDocumento extends Model
 
     protected $fillable = [
         'nombre',
+        'slug',
         'descripcion',
+        'campos',
+        'categoria',
+        'permite_multiples',
         'icono',
-        'activo',
-        'orden'
+        'orden',
+        'activo'
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'permite_multiples' => 'boolean',
+        'campos' => 'array', // JSON automático
     ];
 
     // Convocatorias que requieren este documento
